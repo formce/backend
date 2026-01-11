@@ -18,6 +18,26 @@ const form = new Hono()
 
 form.use(authMiddleware)
 
+form.get('/', async (c) => {
+  const token = c.req.header('Authorization')
+
+  const session = await db.query(`
+    SELECT * FROM sessions WHERE token = ?
+  `).get(token as string)
+
+  if (!session) {
+    return c.json({ message: 'Invalid token' }, 401)
+  }
+
+  const forms = await db.query(`
+    SELECT f.id, f.title, f.description, f.created_at as createdAt
+    FROM forms f
+    WHERE f.user_id = ?
+  `).all((session as Session).user_id)
+
+  return c.json({ forms })
+})
+
 form.post('/', async (c) => {
   const formData = await c.req.json()
   const { title, description } = formData

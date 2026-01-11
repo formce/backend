@@ -5,7 +5,7 @@ import auth from './auth'
 
 const api = new Hono()
 
-api.route('/form', form)
+api.route('/forms', form)
 api.route('/user', user)
 api.route('/auth', auth)
 
