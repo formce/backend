@@ -130,11 +130,32 @@ form.get("/:formId/responses", async (c) => {
   const responses = rows.map((row) => {
     const r = row as FormResponse
     return {
-      responses: JSON.parse(r.responses),
-      submitted_at: r.submitted_at
+      answers: JSON.parse(r.responses),
+      submittedAt: r.submitted_at
     }
   })
-  return c.json({ responses, questions})
+
+  const formRow = await db.query(`
+    SELECT f.id, f.title, f.description, f.created_at as createdAt
+    FROM forms f
+    WHERE f.id = ?
+  `).get(formId)
+  if (!formRow) {
+    return c.json({ message: 'Form not found' }, 404)
+  }
+  const form = formRow as {
+    id: number,
+    title: string,
+    description: string,
+    createdAt: string
+  }
+  const formDetails = {
+    id: form.id,
+    title: form.title,
+    description: form.description,
+    createdAt: form.createdAt
+  }
+  return c.json({ responses, questions, form: formDetails })
 })
 
 export default form
