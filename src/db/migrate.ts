@@ -42,7 +42,6 @@ db.run(`
   CREATE TABLE IF NOT EXISTS form_questions (
     form_id INTEGER NOT NULL PRIMARY KEY,
     questions TEXT NOT NULL,
-    options TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (form_id) REFERENCES forms(id)
   )

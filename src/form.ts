@@ -66,21 +66,20 @@ form.post('/', async (c) => {
 form.post("/:formId/add", async (c) => {
   const { formId } = c.req.param()
   const formData = await c.req.json()
-  const { questions, options } = formData
+  const { questions } = formData
   const questionsStr = JSON.stringify(questions)
-  const optionsStr = JSON.stringify(options)
   await db.run(`
     UPDATE form_questions
-    SET questions = ?, options = ?
+    SET questions = ?
     WHERE form_id = ?
-  `, [questionsStr, optionsStr, formId])
+  `, [questionsStr, formId])
   return c.json({ message: 'Form questions added successfully' })
 })
 
 form.get("/:formId", async (c) => {
   const { formId } = c.req.param()
   const row = await db.query(`
-    SELECT fq.questions, fq.options
+    SELECT fq.questions
     FROM form_questions fq
     WHERE fq.form_id = ?
   `).get(formId)
@@ -88,8 +87,7 @@ form.get("/:formId", async (c) => {
     return c.json({ message: 'Form not found' }, 404)
   }
   const questions = JSON.parse((row as FormQuestions).questions)
-  const options = JSON.parse((row as FormQuestions).options)
-  return c.json({ questions, options })
+  return c.json({ questions })
 })
 
 form.post("/:formId", async (c) => {
@@ -108,7 +106,7 @@ form.get("/:formId/responses", async (c) => {
 
   const { formId } = c.req.param()
   const questionRow = await db.query(`
-    SELECT fq.questions, fq.options
+    SELECT fq.questions
     FROM form_questions fq
     WHERE fq.form_id = ?
   `).get(formId)
@@ -116,7 +114,6 @@ form.get("/:formId/responses", async (c) => {
     return c.json({ message: 'Form not found' }, 404)
   }
   const questions = JSON.parse((questionRow as FormQuestions).questions)
-  const options = JSON.parse((questionRow as FormQuestions).options)
   const rows = await db.query(`
     SELECT fr.id, fr.responses, fr.submitted_at
     FROM form_responses fr
@@ -129,7 +126,7 @@ form.get("/:formId/responses", async (c) => {
       submitted_at: r.submitted_at
     }
   })
-  return c.json({ responses, questions, options })
+  return c.json({ responses, questions})
 })
 
 export default form
