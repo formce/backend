@@ -11,7 +11,6 @@ interface FormResponse {
   }
 interface FormQuestions {
   questions: string,
-  options: string
 }
 
 const form = new Hono()
@@ -87,7 +86,16 @@ form.get("/:formId", async (c) => {
     return c.json({ message: 'Form not found' }, 404)
   }
   const questions = JSON.parse((row as FormQuestions).questions)
-  return c.json({ questions })
+  // Query form details
+  const form = await db.query(`
+    SELECT f.id, f.title, f.description
+    FROM forms f
+    WHERE f.id = ?
+  `).get(formId)
+  if (!form) {
+    return c.json({ message: 'Form not found' }, 404)
+  }
+  return c.json({ questions, form })
 })
 
 form.post("/:formId", async (c) => {
