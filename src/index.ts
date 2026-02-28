@@ -14,4 +14,8 @@ app.get('/', (c) => {
 
 app.route('/api', api)
 
-export default app
+Bun.serve({
+  fetch: app.fetch,
+  port: 3000,
+  hostname: '0.0.0.0',   // THIS IS THE KEY
+})
