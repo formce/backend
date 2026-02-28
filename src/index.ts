@@ -12,7 +12,7 @@ app.get('/', (c) => {
   return c.json({ status: 'up' })
 })
 
-app.route('/api', api)
+// app.route('/api', api)
 
 Bun.serve({
   fetch: app.fetch,
