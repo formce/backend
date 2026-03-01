@@ -22,5 +22,5 @@ jobs:
           script: |
             cd ~/backend
             git pull origin main
-            bun install
-            pm2 restart backend
+            /home/ubuntu/.bun/bin/bun install
+            /home/ubuntu/.bun/bin/pm2 restart backend

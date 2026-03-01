@@ -9,7 +9,7 @@ app.use(cors())
 app.use(logger())
 
 app.get('/', (c) => {
-  return c.json({ status: 'up', actions: 'working'})
+  return c.json({ status: 'up', actions: 'working test 2'})
 })
 
 app.route('/api', api)
