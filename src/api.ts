@@ -1,11 +1,11 @@
 import { Hono } from 'hono'
-import form from './form'
+import project from './project'
 import user from './user'
 import auth from './auth'
 
 const api = new Hono()
 
-api.route('/forms', form)
+api.route('/projects', project)
 api.route('/user', user)
 api.route('/auth', auth)
 

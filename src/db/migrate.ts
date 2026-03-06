@@ -2,7 +2,6 @@ import { Database } from "bun:sqlite";
 
 const db = new Database("src/db/formce.db");
 
-// Example migration: Create a users table
 db.run(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -12,8 +11,6 @@ db.run(`
   )
 `);
 
-//Example migration: Create an sessions table
-//expires_at default to 7 days from created_at
 db.run(`
   CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,9 +22,8 @@ db.run(`
   )
 `);
 
-// Example migration: Create a forms table
 db.run(`
-  CREATE TABLE IF NOT EXISTS forms (
+  CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     title TEXT NOT NULL,
@@ -37,24 +33,25 @@ db.run(`
   )
 `);
 
-// Example migration: Create a form_questions table
 db.run(`
-  CREATE TABLE IF NOT EXISTS form_questions (
-    form_id INTEGER NOT NULL PRIMARY KEY,
+  CREATE TABLE IF NOT EXISTS pages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
     questions TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (form_id) REFERENCES forms(id)
+    FOREIGN KEY (project_id) REFERENCES projects(id)
   )
 `);
 
-// Example migration: Create a form_responses table
 db.run(`
-  CREATE TABLE IF NOT EXISTS form_responses (
+  CREATE TABLE IF NOT EXISTS project_responses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    form_id INTEGER NOT NULL,
+    project_id INTEGER NOT NULL,
     responses TEXT NOT NULL,
     submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (form_id) REFERENCES forms(id)
+    FOREIGN KEY (project_id) REFERENCES projects(id)
   )
 `);
 

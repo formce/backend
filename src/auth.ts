@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { Database } from "bun:sqlite";
-import {authMiddleware} from './middlewares';
+import { authMiddleware } from './middlewares';
 
 const db = new Database("src/db/formce.db");
 
@@ -56,6 +56,30 @@ auth.post("/logout", async (c) => {
     DELETE FROM sessions WHERE token = ?
   `, [token])
   return c.json({ message: 'Logout successful' })
+})
+
+auth.get("/me", async (c) => {
+  const token = c.req.header('Authorization')
+  if (!token) {
+    return c.json({ message: 'Unauthorized' }, 401)
+  }
+  const session = await db.query(`
+    SELECT * FROM sessions WHERE token = ?
+  `).get(token)
+
+  if (!session) {
+    return c.json({ message: 'Invalid token' }, 401)
+  }
+
+  const user = await db.query(`
+    SELECT id, email FROM users WHERE id = ?
+  `).get((session as Session).user_id)
+
+  if (!user) {
+    return c.json({ message: 'User not found' }, 404)
+  }
+
+  return c.json({ user })
 })
 
 export default auth
