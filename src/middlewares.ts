@@ -4,7 +4,8 @@ import { Session } from "./auth";
 const db = new Database("src/db/formce.db");
 
 export const authMiddleware = async (c: any, next: any) => {
-  const token = c.req.header('Authorization')
+  const token = c.req.header('Authorization') || c.req.query('token');
+
   if (!token) {
     return c.json({ message: 'Unauthorized' }, 401)
   }
@@ -23,5 +24,7 @@ export const authMiddleware = async (c: any, next: any) => {
   if (!user) {
     return c.json({ message: 'User not found' }, 404)
   }
+
+  c.set('userId', user.id)
   await next()
 }

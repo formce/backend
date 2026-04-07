@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { Database } from "bun:sqlite";
 import { authMiddleware } from './middlewares';
 import { Session } from "./auth";
+import { appendRowToGoogleSheet } from './integrations/google';
 
 const db = new Database("src/db/formce.db");
 
@@ -54,6 +55,15 @@ project.post("/:projectId/responses", async (c) => {
     INSERT INTO project_responses (project_id, responses)
     VALUES (?, ?)
   `, [projectId, responsesStr])
+
+  // Process Google Sheets Integration in the background
+  const p = await db.query(`SELECT user_id, google_spreadsheet_id FROM projects WHERE id = ?`).get(projectId) as any;
+  if (p && p.google_spreadsheet_id) {
+    appendRowToGoogleSheet(projectId, p.user_id, p.google_spreadsheet_id, responses).catch(err => {
+      console.error("Failed to append to Google Sheets:", err);
+    });
+  }
+
   return c.json({ message: 'Project responses submitted successfully' })
 })
 
@@ -110,7 +120,7 @@ project.get("/:projectId", async (c) => {
   const { projectId } = c.req.param()
 
   const p = await db.query(`
-    SELECT p.id, p.title, p.description, p.created_at as createdAt
+    SELECT p.id, p.title, p.description, p.created_at as createdAt, p.google_spreadsheet_id
     FROM projects p
     WHERE p.id = ?
   `).get(projectId)
@@ -124,8 +134,13 @@ project.get("/:projectId", async (c) => {
     ORDER BY order_index ASC, created_at ASC
   `).all(projectId)
 
+  const userId = (c.get as any)('userId');
+  const usr = await db.query('SELECT google_refresh_token FROM users WHERE id = ?').get(userId as number) as any;
+  const isGoogleConnected = !!(usr && usr.google_refresh_token);
+
   return c.json({
     project: p,
+    isGoogleConnected,
     pages: (pages as any[]).map(pg => ({
       ...pg,
       questions: JSON.parse(pg.questions || '[]'),

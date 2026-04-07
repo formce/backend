@@ -7,6 +7,7 @@ db.run(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    google_refresh_token TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
@@ -28,6 +29,7 @@ db.run(`
     user_id INTEGER NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
+    google_spreadsheet_id TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
   )
@@ -40,6 +42,8 @@ db.run(`
     title TEXT NOT NULL,
     description TEXT,
     questions TEXT NOT NULL,
+    logic TEXT DEFAULT '[]',
+    order_index INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id)
   )
