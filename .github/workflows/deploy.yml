@@ -21,6 +21,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ~/backend
+            git stash
             git pull origin main
+            git stash pop
             /home/ubuntu/.bun/bin/bun install
             /home/ubuntu/.bun/bin/pm2 restart backend
