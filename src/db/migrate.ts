@@ -1,6 +1,14 @@
 import { Database } from "bun:sqlite";
+import { unlinkSync, existsSync } from "node:fs";
 
-const db = new Database("src/db/formce.db");
+const dbPath = "src/db/formce.db";
+
+if (existsSync(dbPath)) {
+  unlinkSync(dbPath);
+  console.log("Existing database deleted.");
+}
+
+const db = new Database(dbPath);
 
 db.run(`
   CREATE TABLE IF NOT EXISTS users (

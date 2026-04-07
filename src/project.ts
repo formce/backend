@@ -149,6 +149,16 @@ project.get("/:projectId", async (c) => {
   })
 })
 
+// Delete a specific project
+project.delete("/:projectId", async (c) => {
+  const { projectId } = c.req.param()
+  // Ensure we delete rows that belong to this project
+  await db.run(`DELETE FROM pages WHERE project_id = ?`, [projectId])
+  await db.run(`DELETE FROM project_responses WHERE project_id = ?`, [projectId])
+  await db.run(`DELETE FROM projects WHERE id = ?`, [projectId])
+  return c.json({ message: 'Project deleted successfully' })
+})
+
 // Create a new page in a project
 project.post("/:projectId/pages", async (c) => {
   const { projectId } = c.req.param()
@@ -226,6 +236,13 @@ project.get("/:projectId/pages/:pageId", async (c) => {
       logic: JSON.parse((page as any).logic || '[]')
     }
   })
+})
+
+// Delete a specific page (for editing)
+project.delete("/:projectId/pages/:pageId", async (c) => {
+  const { pageId } = c.req.param()
+  await db.run(`DELETE FROM pages WHERE id = ?`, [pageId])
+  return c.json({ message: 'Page deleted successfully' })
 })
 
 // Update a page's questions
