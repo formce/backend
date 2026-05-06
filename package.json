@@ -1,7 +1,8 @@
 {
   "name": "backend",
   "scripts": {
-    "dev": "bun run --hot src/index.ts"
+    "dev": "bun run --hot src/index.ts",
+    "migrate": "bun run src/db/migrate.ts"
   },
   "dependencies": {
     "hono": "^4.11.3"

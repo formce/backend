@@ -3,6 +3,8 @@ import { Database } from "bun:sqlite";
 import { authMiddleware } from './middlewares';
 import { Session } from "./auth";
 import { appendRowToGoogleSheet } from './integrations/google';
+import { appendRowToNotionDatabase } from './integrations/notion';
+import { appendRowToAirtableTable } from './integrations/airtable';
 
 const db = new Database("src/db/formce.db");
 
@@ -20,8 +22,9 @@ const project = new Hono()
 project.get("/:projectId/public", async (c) => {
   const { projectId } = c.req.param()
   const p = await db.query(`
-    SELECT p.id, p.title, p.description
+    SELECT p.id, p.title, p.description, p.success_title, p.success_message, p.custom_css, p.background_color, p.brand_logo_url, p.form_type_title, u.email as creator_email
     FROM projects p
+    JOIN users u ON p.user_id = u.id
     WHERE p.id = ?
   `).get(projectId)
 
@@ -56,11 +59,23 @@ project.post("/:projectId/responses", async (c) => {
     VALUES (?, ?)
   `, [projectId, responsesStr])
 
-  // Process Google Sheets Integration in the background
-  const p = await db.query(`SELECT user_id, google_spreadsheet_id FROM projects WHERE id = ?`).get(projectId) as any;
+  // Process Integrations in the background
+  const p = await db.query(`SELECT user_id, google_spreadsheet_id, notion_database_id, airtable_base_id, airtable_table_name FROM projects WHERE id = ?`).get(projectId) as any;
   if (p && p.google_spreadsheet_id) {
     appendRowToGoogleSheet(projectId, p.user_id, p.google_spreadsheet_id, responses).catch(err => {
       console.error("Failed to append to Google Sheets:", err);
+    });
+  }
+
+  if (p && p.notion_database_id) {
+    appendRowToNotionDatabase(projectId, p.user_id, p.notion_database_id, responses).catch(err => {
+      console.error("Failed to append to Notion Database:", err);
+    });
+  }
+
+  if (p && p.airtable_base_id && p.airtable_table_name) {
+    appendRowToAirtableTable(projectId, p.user_id, p.airtable_base_id, p.airtable_table_name, responses).catch(err => {
+      console.error("Failed to append to Airtable:", err);
     });
   }
 
@@ -118,12 +133,14 @@ project.post('/', async (c) => {
 // Get a specific project and its pages
 project.get("/:projectId", async (c) => {
   const { projectId } = c.req.param()
+  const token = c.req.header('Authorization')
+  const session = await db.query(`SELECT * FROM sessions WHERE token = ?`).get(token as string) as Session;
 
   const p = await db.query(`
-    SELECT p.id, p.title, p.description, p.created_at as createdAt, p.google_spreadsheet_id
+    SELECT p.id, p.title, p.description, p.created_at as createdAt, p.google_spreadsheet_id, p.success_title, p.success_message, p.custom_css, p.background_color, p.brand_logo_url, p.form_type_title, p.notion_database_id, p.airtable_base_id, p.airtable_table_name, p.google_drive_folder_id
     FROM projects p
-    WHERE p.id = ?
-  `).get(projectId)
+    WHERE p.id = ? AND p.user_id = ?
+  `).get(projectId, session.user_id)
 
   if (!p) { return c.json({ message: 'Project not found' }, 404) }
 
@@ -214,6 +231,20 @@ project.put("/:projectId/pages/:pageId", async (c) => {
       WHERE id = ?
     `, [title, description, pageId])
   return c.json({ message: 'Page details updated successfully' })
+})
+
+// Update project settings
+project.put("/:projectId/settings", async (c) => {
+  const { projectId } = c.req.param();
+  const formData = await c.req.json();
+  const { success_title, success_message, custom_css, background_color, brand_logo_url, form_type_title } = formData;
+
+  await db.run(`
+      UPDATE projects
+      SET success_title = ?, success_message = ?, custom_css = ?, background_color = ?, brand_logo_url = ?, form_type_title = ?
+      WHERE id = ?
+    `, [success_title, success_message, custom_css, background_color, brand_logo_url, form_type_title, projectId])
+  return c.json({ message: 'Project settings updated successfully' })
 })
 
 // Get a specific page's details (for editing)

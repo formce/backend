@@ -25,7 +25,7 @@ googleIntegrations.get('/auth', authMiddleware, (c) => {
   authUrl.searchParams.append('client_id', GOOGLE_CLIENT_ID);
   authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
   authUrl.searchParams.append('response_type', 'code');
-  authUrl.searchParams.append('scope', 'https://www.googleapis.com/auth/spreadsheets');
+  authUrl.searchParams.append('scope', 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file');
   authUrl.searchParams.append('access_type', 'offline');
   authUrl.searchParams.append('prompt', 'consent'); // Force consent to guarantee a refresh token
   authUrl.searchParams.append('state', state);
@@ -166,6 +166,78 @@ googleIntegrations.post('/project/:id/spreadsheet/create', authMiddleware, async
   });
 });
 
+googleIntegrations.post('/project/:id/drive', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const projectId = c.req.param('id');
+  const { folderId } = await c.req.json();
+
+  const project = db.query("SELECT * FROM projects WHERE id = ? AND user_id = ?").get(projectId, userId as number);
+  if (!project) {
+    return c.json({ error: "Project not found or unauthorized" }, 404);
+  }
+
+  const stmt = db.prepare('UPDATE projects SET google_drive_folder_id = ? WHERE id = ?');
+  stmt.run(folderId, projectId);
+
+  return c.json({ success: true, message: 'Google Drive folder linked to project.' });
+});
+
+googleIntegrations.post('/project/:id/drive/create', authMiddleware, async (c) => {
+  const userId = c.get('userId');
+  const projectId = c.req.param('id');
+
+  const project: any = db.query("SELECT * FROM projects WHERE id = ? AND user_id = ?").get(projectId, userId as number);
+  const user: any = db.query("SELECT google_refresh_token FROM users WHERE id = ?").get(userId as number);
+
+  if (!project || !user || !user.google_refresh_token) {
+    return c.json({ error: "Project or Google Connection not found" }, 404);
+  }
+
+  // Get fresh access token
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      refresh_token: user.google_refresh_token,
+      grant_type: 'refresh_token'
+    })
+  });
+
+  const tokenData = await tokenRes.json();
+  if (!tokenData.access_token) return c.json({ error: "Failed to authenticate with Google", details: tokenData }, 500);
+
+  try {
+    const fileMetadata = {
+      name: `Formce: ${project.title}`,
+      mimeType: 'application/vnd.google-apps.folder',
+    };
+
+    const driveRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${tokenData.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(fileMetadata)
+    });
+
+    if (!driveRes.ok) throw new Error(await driveRes.text());
+    const file = await driveRes.json();
+
+    const folderId = file.id;
+
+    const stmt = db.prepare('UPDATE projects SET google_drive_folder_id = ? WHERE id = ?');
+    stmt.run(folderId, projectId);
+
+    return c.json({ success: true, folderId });
+  } catch (err: any) {
+    console.error("Error creating Google Drive folder:", err);
+    return c.json({ error: 'Failed to create Drive folder', details: err.message }, 500);
+  }
+});
+
 // Helper function to be used during form submission
 export async function appendRowToGoogleSheet(projectId: string | number, userId: number, spreadsheetId: string, responses: any) {
   // 1. Fetch questions to map order
@@ -189,7 +261,7 @@ export async function appendRowToGoogleSheet(projectId: string | number, userId:
   });
 
   const headers = ['Submitted At', ...questionsList.map(q => q.title)];
-  const now = new Date().toLocaleString();
+  const now = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000)).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
 
   const rowValues = [now];
   questionsList.forEach(q => {

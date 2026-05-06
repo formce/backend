@@ -16,7 +16,10 @@ db.run(`
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     google_refresh_token TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    notion_access_token TEXT,
+    notion_workspace_id TEXT,
+    airtable_refresh_token TEXT,
+    created_at DATETIME DEFAULT (datetime('now', '+5 hours', '30 minutes'))
   )
 `);
 
@@ -25,8 +28,8 @@ db.run(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     token TEXT NOT NULL UNIQUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    expires_at DATETIME NOT NULL DEFAULT (DATETIME('now', '+7 days')),
+    created_at DATETIME DEFAULT (datetime('now', '+5 hours', '30 minutes')),
+    expires_at DATETIME NOT NULL DEFAULT (datetime('now', '+5 hours', '30 minutes', '+7 days')),
     FOREIGN KEY (user_id) REFERENCES users(id)
   )
 `);
@@ -37,8 +40,18 @@ db.run(`
     user_id INTEGER NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
+    success_title TEXT DEFAULT 'Thank you!',
+    success_message TEXT DEFAULT 'Your response has been successfully recorded.',
+    custom_css TEXT DEFAULT '',
+    background_color TEXT DEFAULT '#ffffff',
+    brand_logo_url TEXT DEFAULT '',
+    form_type_title TEXT DEFAULT 'Public Survey',
     google_spreadsheet_id TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    google_drive_folder_id TEXT,
+    notion_database_id TEXT,
+    airtable_base_id TEXT,
+    airtable_table_name TEXT,
+    created_at DATETIME DEFAULT (datetime('now', '+5 hours', '30 minutes')),
     FOREIGN KEY (user_id) REFERENCES users(id)
   )
 `);
@@ -52,7 +65,7 @@ db.run(`
     questions TEXT NOT NULL,
     logic TEXT DEFAULT '[]',
     order_index INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT (datetime('now', '+5 hours', '30 minutes')),
     FOREIGN KEY (project_id) REFERENCES projects(id)
   )
 `);
@@ -62,7 +75,7 @@ db.run(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER NOT NULL,
     responses TEXT NOT NULL,
-    submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    submitted_at DATETIME DEFAULT (datetime('now', '+5 hours', '30 minutes')),
     FOREIGN KEY (project_id) REFERENCES projects(id)
   )
 `);
